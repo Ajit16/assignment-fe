@@ -14,10 +14,14 @@ A React app with dashboard for file listings and detail view for previews.
 - Mock backend with JSON Server
 
 ## Setup
-
+## local setup
 1. `npm install`
 2. `npm run dev` (starts Vite + JSON Server) local dev FE server: http://localhost:5173/
 3. `npm run server` (to start JSON server) local dev DB server: http://localhost:3003
+
+
+## if you want to checking live deployment link. you need to install poject on local and run server comand so that 
+
 
 ## Deployment
 
