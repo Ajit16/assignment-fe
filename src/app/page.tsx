@@ -1,14 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { useEffect, useMemo, useState } from "react";
-import { updateData} from '../utils'
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
 import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { useRouter } from 'next/navigation'
 
-const uploadFile = async (files: any) => {
-  const base64Promises = files?.map((file:any) =>
+interface FileItem {
+  id: string;
+  name: string;
+  type: string;
+  content: string;
+  [key: string]: string | number;
+}
+
+const uploadFile = async (files: FileItem[]) => {
+  const base64Promises = files?.map((file: any) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -43,7 +51,6 @@ const uploadFile = async (files: any) => {
 const fetchItems = async () => {
   const res = await fetch('/api/items');
   const data = await res.json();
-  console.log("data", data);
   return data.data;
 };
 
@@ -57,8 +64,8 @@ export default function Home() {
     retry:1
   });
 
-  const mutation: any = useMutation({
-    mutationFn: async (file: any) => {
+  const mutation = useMutation({
+    mutationFn: async (file: FileItem[]) => {
       return uploadFile(file);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["files"] }),
@@ -83,11 +90,11 @@ export default function Home() {
       {
         accessorKey: "name",
         header: "File Name",
-        cell: ({ row }: any) => (
+        cell: ({ row } : any) => (
           <span
             style={{ cursor: "pointer", color: "blue" }}
             onClick={() => {
-              localStorage.setItem("selectedFileId", row.original._id);
+              localStorage.setItem("selectedFileId", row?.original._id);
               router.push("/detail");
             }}
           >
@@ -98,7 +105,7 @@ export default function Home() {
       { accessorKey: "uploadedDate", header: "Uploaded Date" },
       { accessorKey: "uploadedBy", header: "Uploaded By" },
     ],
-    []
+    [router]
   );
 
   const table = useReactTable({
@@ -118,7 +125,7 @@ export default function Home() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const validFiles = files.filter(
+    const validFiles: any = files.filter(
       (file) =>
         file.type === "application/pdf" || file.type.startsWith("image/")
     );
@@ -137,6 +144,7 @@ export default function Home() {
       try{
       mutation.mutateAsync(validFiles);
       } catch (error) {
+        console.log(error)
         alert(`Failed to upload some files. Check console for details.`);
       }
 

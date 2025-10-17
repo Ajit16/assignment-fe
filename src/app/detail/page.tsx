@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from '@tanstack/react-query'
 import dynamic from "next/dynamic";
+import Image from "next/image";
 const PDFViewer = dynamic(() => import('@/components/pdf-viewer'), { ssr: false })
 
 
@@ -19,9 +21,6 @@ export default function Detail() {
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [numPages, setNumPages] = useState(0)
-  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -61,27 +60,7 @@ export default function Detail() {
     setSelectedId(files[newIndex]._id)
   }
 
-  useEffect(() => {
-    if (selectedId) setCurrentPage(1)
-  }, [selectedId])
 
-  const handleScroll = () => {
-    if (!scrollRef.current || selectedFile?.type !== 'application/pdf') return
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 20
-    if (scrolledToBottom && currentPage < numPages) {
-      setCurrentPage((prev) => prev + 1)
-    }
-  }
-
-  const goToPage = (pageNum: number) => {
-    if (pageNum >= 1 && pageNum <= numPages) {
-      setCurrentPage(pageNum)
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-      }, 100)
-    }
-  }
   if (isLoading) return <div className="p-4">Loading files...</div>
   if (!files.length) return <div className="p-4">No files uploaded yet.</div>
   if (!selectedFile) return <div className="p-4">Selecting file...</div>
@@ -124,12 +103,10 @@ export default function Detail() {
         </div>
 
         <div
-          ref={scrollRef}
           className="border border-slate-200 p-2.5 flex-1 overflow-auto flex flex-col items-center gap-2.5"
-          onScroll={handleScroll}
         >
           {selectedFile?.type?.startsWith('image/') ? (
-            <img
+            <Image
               src={selectedFile.content}
               alt={selectedFile.name}
               style={{ maxWidth: '100%' }}
@@ -137,36 +114,6 @@ export default function Detail() {
           ) : selectedFile.type === 'application/pdf' ? (
             <>
             <PDFViewer file={selectedFile} />
-              {/* <Document
-                file={selectedFile.content}
-                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                loading={<div>Loading PDF page {currentPage}...</div>}
-              >
-                <Page
-                  pageNumber={currentPage}
-                  width={Math.min(600, window.innerWidth * 0.6)}
-                  renderTextLayer
-                  renderAnnotationLayer
-                />
-              </Document> */}
-
-              {/* <div className="flex justify-center gap-2.5 mb-2.5 flex-wrap text-xs">
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage <= 1}
-                >
-                  ← Prev Page
-                </button>
-                <span>
-                  Page {currentPage} of {numPages}
-                </span>
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage >= numPages}
-                >
-                  Next Page →
-                </button>
-              </div> */}
             </>
           ) : (
             <div>Unsupported file type</div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useRef, useState } from 'react'
@@ -10,7 +11,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url
   ).toString();
 
-export default function PDFViewer({ file }: { file: any }) {
+export default function PDFViewer({ file }: any) {
   const [numPages, setNumPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
