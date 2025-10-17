@@ -1,61 +1,65 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
-  type ColumnDef,
-} from "@tanstack/react-table";
-import { useNavigate } from "react-router-dom";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import { ArrowUpward, ArrowDownward } from "@mui/icons-material";
-import type { File } from "./types"; // Create types.ts for this
-import { getFiles, updateData } from "./utils";
+"use client"
+import { useEffect, useMemo, useState } from "react";
+import { updateData} from '../utils'
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
+import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
+import { useRouter } from 'next/navigation'
 
-const fetchFiles = async () => {
-  const data  = await getFiles();
-  return data as any[];
+const uploadFile = async (files: any) => {
+  const base64Promises = files?.map((file:any) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    })
+  );
+
+  const base64Contents = await Promise.all(base64Promises);
+
+
+  const newFiles = base64Contents.map((base64, index) => ({
+    name: files[index].name,
+    uploadedDate: new Date().toISOString(),
+    uploadedBy: "User",
+    type: files[index].type,
+    content: base64,
+  }));
+
+  
+  const res = await fetch('/api/items',{
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(newFiles),}
+  );
+  const data = await res.json();
+  return data.data;
 };
 
-const uploadFile = async (file: any, oldFiles: any[]) => {
-  const reader = new FileReader();
-  return new Promise((resolve, reject) => {
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      const newFile = {
-        name: file.name,
-        uploadedDate: new Date().toISOString(),
-        uploadedBy: "User",
-        content: base64,
-        type: file.type,
-      };
-      const newFiles = [...oldFiles, newFile]
-      const { data } = await updateData(newFiles);
-      resolve(data);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+const fetchItems = async () => {
+  const res = await fetch('/api/items');
+  const data = await res.json();
+  console.log("data", data);
+  return data.data;
 };
 
-export default function Dashboard() {
-  const navigate = useNavigate();
+export default function Home() {
+
+  const router = useRouter()
   const queryClient = useQueryClient();
   const { data: files = [], isLoading } = useQuery({
     queryKey: ["files"],
-    queryFn: fetchFiles,
-    retry:2
+    queryFn: fetchItems,
+    retry:1
   });
 
-  const mutation = useMutation({
+  const mutation: any = useMutation({
     mutationFn: async (file: any) => {
-      return uploadFile(file, files);
+      return uploadFile(file);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["files"] }),
   });
@@ -63,17 +67,19 @@ export default function Dashboard() {
   const [open, setOpen] = useState(false);
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState(() => {
-    const saved = localStorage.getItem("dashboardPagination");
+    const saved = typeof window !== 'undefined' ? localStorage.getItem("dashboardPagination") : JSON.stringify({ pageIndex: 0, pageSize: 10 }) ;
     return saved ? JSON.parse(saved) : { pageIndex: 0, pageSize: 10 };
   });
 
   useEffect(() => {
-    localStorage.setItem("dashboardPagination", JSON.stringify(pagination));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("dashboardPagination", JSON.stringify(pagination));
+    }
   }, [pagination]);
 
   const columns = useMemo<ColumnDef<File>[]>(
     () => [
-      { accessorKey: "id", header: "S.NO" },
+      { accessorKey: "_id", header: "S.NO", cell: (info) => info.row.index + 1, },
       {
         accessorKey: "name",
         header: "File Name",
@@ -81,8 +87,8 @@ export default function Dashboard() {
           <span
             style={{ cursor: "pointer", color: "blue" }}
             onClick={() => {
-              localStorage.setItem("selectedFileId", row.original.id);
-              navigate("/detail");
+              localStorage.setItem("selectedFileId", row.original._id);
+              router.push("/detail");
             }}
           >
             {row.original.name}
@@ -92,7 +98,7 @@ export default function Dashboard() {
       { accessorKey: "uploadedDate", header: "Uploaded Date" },
       { accessorKey: "uploadedBy", header: "Uploaded By" },
     ],
-    [navigate]
+    []
   );
 
   const table = useReactTable({
@@ -133,23 +139,13 @@ export default function Dashboard() {
       } catch (error) {
         alert(`Failed to upload some files. Check console for details.`);
       }
-      // const uploadPromises = validFiles.map((file) =>
-      //   mutation.mutateAsync(file)
-      // );
 
-      // try {
-      //   await Promise.all(uploadPromises);
-      //   // alert(`Uploaded ${validFiles.length} file(s) successfully!`);
-      // } catch (error) {
-      //   alert(`Failed to upload some files. Check console for details.`);
-      // }
     }
 
     e.target.value = "";
     setOpen(false);
   };
-
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading || mutation?.isPending) return <div>Loading...</div>;
 
   return (
     <div className="px-4">

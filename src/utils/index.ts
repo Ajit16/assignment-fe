@@ -2,11 +2,11 @@ import axios from "axios";
 
 // Create axios instance with base config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL,
+  baseURL: process.env.BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'X-Master-Key': import.meta.env.VITE_MASTER_KEY,
-    'X-Access-Key': import.meta.env.VITE_X_ACCESS_KEY,
+    'X-Master-Key': process.env.MASTER_KEY,
+    'X-Access-Key': process.env.X_ACCESS_KEY,
   },
   withCredentials: false,
 });
@@ -14,7 +14,7 @@ const api = axios.create({
 // Fetch files from bin
 export const getFiles = async () => {
   try {
-    const { data } = await api.get(`/b/${import.meta.env.VITE_BIN_ID}`);
+    const { data } = await api.get(`/b/${process.env.BIN_ID}`);
     return data.record as File[];// JSONBin wraps data in .record
   } catch (error) {
     console.error('Error fetching files:', error);
@@ -29,7 +29,7 @@ export const getFiles = async () => {
 export const updateData = async (files: File[]) => {
   try {
     const { data } = await api.put(
-      `/b/${import.meta.env.VITE_BIN_ID}`, { files }
+      `/b/${process.env.BIN_ID}`, files
     );
     return data.record; // Return updated data
   } catch (error) {
@@ -48,7 +48,7 @@ export const createBin = async (initialData: any) => {
 };
 
 export const deleteBin = async () => {
-  await api.delete(`/b/${import.meta.env.VITE_BIN_ID}`);
+  await api.delete(`/b/${process.env.BIN_ID}`);
 };
 
 export default api;
