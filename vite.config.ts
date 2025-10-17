@@ -6,6 +6,20 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss(),],
   build: {
-    target: 'esnext'
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
+    }
+  },
+  // 👇 VITAL: Tell Vercel where API routes are
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.jsonbin.io',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   }
 })

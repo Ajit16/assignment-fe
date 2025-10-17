@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import type { File } from "./types";
+import { getFiles } from "./utils";
 
 // Set PDF worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -12,11 +11,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-const API_URL = "http://localhost:3033/files";
-
 const fetchFiles = async () => {
-  const { data } = await axios.get(API_URL);
-  return data as File[];
+  const data  = await getFiles();
+  return data as any[];
 };
 
 export default function Detail() {

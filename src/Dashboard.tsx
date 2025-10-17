@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,15 +16,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import { ArrowUpward, ArrowDownward } from "@mui/icons-material";
 import type { File } from "./types"; // Create types.ts for this
-
-const API_URL = "http://localhost:3033/files";
+import { getFiles, updateData } from "./utils";
 
 const fetchFiles = async () => {
-  const { data } = await axios.get(API_URL);
-  return data as File[];
+  const data  = await getFiles();
+  return data as any[];
 };
 
-const uploadFile = async (file: any) => {
+const uploadFile = async (file: any, oldFiles: any[]) => {
   const reader = new FileReader();
   return new Promise((resolve, reject) => {
     reader.onload = async () => {
@@ -37,7 +35,8 @@ const uploadFile = async (file: any) => {
         content: base64,
         type: file.type,
       };
-      const { data } = await axios.post(API_URL, newFile);
+      const newFiles = [...oldFiles, newFile]
+      const { data } = await updateData(newFiles);
       resolve(data);
     };
     reader.onerror = reject;
@@ -51,9 +50,13 @@ export default function Dashboard() {
   const { data: files = [], isLoading } = useQuery({
     queryKey: ["files"],
     queryFn: fetchFiles,
+    retry:2
   });
+
   const mutation = useMutation({
-    mutationFn: uploadFile,
+    mutationFn: async (file: any) => {
+      return uploadFile(file, files);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["files"] }),
   });
 
@@ -125,16 +128,21 @@ export default function Dashboard() {
     }
 
     if (validFiles.length > 0) {
-      const uploadPromises = validFiles.map((file) =>
-        mutation.mutateAsync(file)
-      );
-
-      try {
-        await Promise.all(uploadPromises);
-        // alert(`Uploaded ${validFiles.length} file(s) successfully!`);
+      try{
+      mutation.mutateAsync(validFiles);
       } catch (error) {
         alert(`Failed to upload some files. Check console for details.`);
       }
+      // const uploadPromises = validFiles.map((file) =>
+      //   mutation.mutateAsync(file)
+      // );
+
+      // try {
+      //   await Promise.all(uploadPromises);
+      //   // alert(`Uploaded ${validFiles.length} file(s) successfully!`);
+      // } catch (error) {
+      //   alert(`Failed to upload some files. Check console for details.`);
+      // }
     }
 
     e.target.value = "";
